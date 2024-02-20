@@ -9,7 +9,7 @@ class Query_Registry
     private array $storage = [];
 
     private function __construct() {
-        add_action('init', function() {
+        add_action('wp', function() {
             $this->registerQuery();
         }, 99);
     }
