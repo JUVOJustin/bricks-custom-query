@@ -111,6 +111,12 @@ Query_Registry::set(
     'collection_prompts', // Query name
     'Collection Prompts', // Query label
     function(array $args, $query_obj, Query $query) { // Callback for query args
+        
+        // Check setting and apply your logic
+        if (!empty($query_obj->settings['return_all'])) {
+            $args['posts_per_page'] = -1;
+        }
+        
         return array_merge($args, [
                 'post_type' => 'posts',
             ]
