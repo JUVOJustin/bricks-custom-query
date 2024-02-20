@@ -1,0 +1,31 @@
+{
+  "name": "juvo/bricks-custom-query",
+  "description": "Easy to use custom bricks query",
+  "keywords"    : [ "wordpress", "bricksbuilder", "query" ],
+  "license": "GPL-3.0-or-later",
+  "require": {
+    "php": ">=8.1.0"
+  },
+  "authors": [
+    {
+      "name": "Justin Vogt",
+      "email": "mail@justin-vogt.de",
+      "homepage": "https://justin-vogt.com"
+    }
+  ],
+  "autoload": {
+    "psr-4": {
+      "juvo\\Bricks_Custom_Queries\\": "src/"
+    }
+  },
+  "require-dev": {
+    "phpstan/phpstan": "^1.10.6",
+    "szepeviktor/phpstan-wordpress": "^v1.1.7",
+    "phpstan/extension-installer": "^1.1"
+  },
+  "config": {
+    "allow-plugins": {
+      "phpstan/extension-installer": true
+    }
+  }
+}
