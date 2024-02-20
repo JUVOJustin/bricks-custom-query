@@ -21,7 +21,6 @@ class Query
 
     private array $config_flags = [
         'wpgb'             => true,
-        'cache'            => false,
         'per_page_control' => true
     ];
 
