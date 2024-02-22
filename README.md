@@ -68,8 +68,6 @@ Choose `Query_Type::Other` if you are not working with native wordpress data typ
 For native wordpress data types the callback must return valid query arguments. For custom data types you need to return
 the actual data. For the later the return value will not be processed further.
 
-To register another tag to the same group you simply do:
-
 ### WP Gridbuilder Support
 By default each query is setup to support WP Gridbuilder. In your callback you will see the requried arguments. If you don´t want wpgb support, simply do:
 ```php
