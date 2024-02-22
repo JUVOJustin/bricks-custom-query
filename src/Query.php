@@ -7,223 +7,263 @@ use WP_Query;
 use WP_Term_Query;
 use WP_User_Query;
 
-class Query
-{
-    private readonly string $name;
+class Query {
+	private readonly string $name;
 
-    private string $label;
+	private string $label;
 
-    private array $controls = [];
+	private array $controls = [];
 
-    private $callback;
+	private $callback;
 
-    private Query_Type $type;
+	private Query_Type $type;
 
-    private array $config_flags = [
-        'wpgb'             => true,
-        'per_page_control' => true
-    ];
+	private array $config_flags = [
+		'wpgb'             => true,
+		'per_page_control' => true,
+		'loop_object_callback' => false
+	];
 
-    /**
-     * @param string $name
-     * @param string $label
-     * @param callable $callback
-     * @param Query_Type $type
-     */
-    public function __construct(string $name, string $label, callable $callback, Query_Type $type)
-    {
-        $this->name = $name;
-        $this->label = $label;
-        $this->callback = $callback;
-        $this->type = $type;
+	/**
+	 * @param string $name
+	 * @param string $label
+	 * @param callable $callback
+	 * @param Query_Type $type
+	 */
+	public function __construct( string $name, string $label, callable $callback, Query_Type $type ) {
+		$this->name     = $name;
+		$this->label    = $label;
+		$this->callback = $callback;
+		$this->type     = $type;
 
-        // On init iterate all config flags and set their default
-        foreach ($this->config_flags as $key => $value) {
-            if ($value === true && method_exists($this, $key)) {
-                $this->$key(true);
-            }
-        }
-    }
+		// On init iterate all config flags and set their default
+		foreach ( $this->config_flags as $key => $value ) {
+			if ( $value === true && method_exists( $this, $key ) ) {
+				$this->$key( true );
+			}
+		}
+	}
 
-    /**
-     * Callback that actually runs our query
-     *
-     * @param $results
-     * @param $query_obj
-     * @return array
-     */
-    public function bricks_query($results, $query_obj): array
-    {
+	/**
+	 * Callback that actually runs our query
+	 *
+	 * @param $results
+	 * @param $query_obj
+	 *
+	 * @return array
+	 */
+	public function bricks_query( $results, $query_obj ): array {
 
-        // Only modify queries for benefits
-        if ($query_obj->object_type !== $this->name) {
-            return $results;
-        }
+		// Only modify queries for benefits
+		if ( $query_obj->object_type !== $this->name ) {
+			return $results;
+		}
 
-        // Start profiling with query monitor
-        do_action('qm/start', "bricks-$this->name-query");
+		// Start profiling with query monitor
+		do_action( 'qm/start', "bricks-$this->name-query" );
 
-        if ($this->type === Query_Type::Other) {
-            // For non WordPress native types the callback must return the results
-            $results = call_user_func_array($this->callback, [
-                $results,
-                $query_obj,
-                &$this
-            ]);
-        } else {
+		if ( $this->type === Query_Type::Other ) {
+			// For non WordPress native types the callback must return the results
+			$results = call_user_func_array( $this->callback, [
+				$results,
+				$query_obj,
+				&$this
+			] );
+		} else {
 
-            $args = [];
+			$args = [];
 
-            // --- Config Flag: wpgb ---
-            if ($this->config_flags['wpgb']) {
-                $args['wpgb_bricks'] = 'bricks-element-' . $query_obj->element_id;
-            }
+			// --- Config Flag: wpgb ---
+			if ( $this->config_flags['wpgb'] ) {
+				$args['wpgb_bricks'] = 'bricks-element-' . $query_obj->element_id;
+			}
 
-            // --- Config Flag: per_page_control ---
-            if ($this->config_flags['per_page_control'] instanceof Per_Page_Control) {
-                $args = $this->config_flags['per_page_control']->add_per_page_arg($args, $query_obj, $this->type);
-            }
+			// --- Config Flag: per_page_control ---
+			if ( $this->config_flags['per_page_control'] instanceof Per_Page_Control ) {
+				$args = $this->config_flags['per_page_control']->add_per_page_arg( $args, $query_obj, $this->type );
+			}
 
-            // For wordpress native types the callback must return the query args. This allows manipulation and caching
-            $args = call_user_func_array($this->callback, [
-                $args,
-                $query_obj,
-                &$this
-            ]);
+			// For wordpress native types the callback must return the query args. This allows manipulation and caching
+			$args = call_user_func_array( $this->callback, [
+				$args,
+				$query_obj,
+				&$this
+			] );
 
-            switch ($this->type) {
-                case Query_Type::Post:
-                    $query = new WP_Query($args);
-                    $results = $query->get_posts();
-                    break;
-                case Query_Type::User:
-                    $query = new WP_User_Query($args);
-                    $results = $query->get_results();
-                    break;
-                case Query_Type::Term:
-                    $query = new WP_Term_Query($args);
-                    $results = $query->get_terms();
-                    break;
-            }
-        }
+			switch ( $this->type ) {
+				case Query_Type::Post:
+					$query   = new WP_Query( $args );
+					$results = $query->get_posts();
+					break;
+				case Query_Type::User:
+					$query   = new WP_User_Query( $args );
+					$results = $query->get_results();
+					break;
+				case Query_Type::Term:
+					$query   = new WP_Term_Query( $args );
+					$results = $query->get_terms();
+					break;
+			}
+		}
 
-        // Stop profiling with query monitor
-        do_action('qm/stop', "bricks-$this->name-query");
+		// Stop profiling with query monitor
+		do_action( 'qm/stop', "bricks-$this->name-query" );
 
-        if (empty($results)) {
-            return [];
-        }
+		if ( empty( $results ) ) {
+			return [];
+		}
 
-        return $results;
-    }
+		return $results;
+	}
 
-    /**
-     * Make query type selectable in bricks
-     *
-     * @param $control_options
-     * @return array
-     */
-    public function bricks_add_query_type($control_options): array
-    {
-        $control_options['queryTypes'][$this->name] = $this->label ?? "";
-        return $control_options;
-    }
+	/**
+	 * Make query type selectable in bricks
+	 *
+	 * @param $control_options
+	 *
+	 * @return array
+	 */
+	public function bricks_add_query_type( $control_options ): array {
+		$control_options['queryTypes'][ $this->name ] = $this->label ?? "";
 
-    /**
-     * Registers additional controls to elements.
-     * Controls will be added just below the loop selector
-     *
-     * @param $controls
-     * @return array
-     */
-    public function bricks_register_controls($controls): array
-    {
-        // --- Config Flag: per_page_control ---
-        if ($this->config_flags['per_page_control'] instanceof Per_Page_Control) {
-            $this->controls = $this->config_flags['per_page_control']->per_page_control() + $this->controls;
-        }
+		return $control_options;
+	}
 
-        // Continue if no controls to add
-        if (empty($this->controls)) {
-            return $controls;
-        }
+	/**
+	 * Registers additional controls to elements.
+	 * Controls will be added just below the loop selector
+	 *
+	 * @param $controls
+	 *
+	 * @return array
+	 */
+	public function bricks_register_controls( $controls ): array {
+		// --- Config Flag: per_page_control ---
+		if ( $this->config_flags['per_page_control'] instanceof Per_Page_Control ) {
+			$this->controls = $this->config_flags['per_page_control']->per_page_control() + $this->controls;
+		}
 
-        // Get key before separator to add loop controls
-        $key = array_search("loopSeparator", array_keys($controls));
+		// Continue if no controls to add
+		if ( empty( $this->controls ) ) {
+			return $controls;
+		}
 
-        // Add Limit at right position
-        $controls_start = array_slice($controls, 0, $key, true);
-        $controls_end = array_slice($controls, $key, count($controls) - $key, true);
+		// Get key before separator to add loop controls
+		$key = array_search( "loopSeparator", array_keys( $controls ) );
 
-        $controls_new = [];
-        foreach ($this->controls as $key => $control) {
+		// Add Limit at right position
+		$controls_start = array_slice( $controls, 0, $key, true );
+		$controls_end   = array_slice( $controls, $key, count( $controls ) - $key, true );
 
-            // If field with same key already exists merge required field
-            if (!empty($controls_new[$key])) {
-                $controls_new[$key]['required'][1][2][] = $this->name;
-                continue;
-            }
+		$controls_new = [];
+		foreach ( $this->controls as $key => $control ) {
 
-            // Set basics
-            $raw_control = [
-                'tab'      => 'content',
-                'required' => [
-                    ['hasLoop', '!=', false],
-                    ['query.objectType', '=', [$this->name]]
-                ]
-            ];
-            $control = $raw_control + $control;
-            $controls_new[$key] = $control;
-        }
+			// If field with same key already exists merge required field
+			if ( ! empty( $controls_new[ $key ] ) ) {
+				$controls_new[ $key ]['required'][1][2][] = $this->name;
+				continue;
+			}
 
-        return $controls_start + $controls_new + $controls_end;
-    }
+			// Set basics
+			$raw_control          = [
+				'tab'      => 'content',
+				'required' => [
+					[ 'hasLoop', '!=', false ],
+					[ 'query.objectType', '=', [ $this->name ] ]
+				]
+			];
+			$control              = $raw_control + $control;
+			$controls_new[ $key ] = $control;
+		}
 
-    public function bricks_query_loop_object($loop_object, $query_obj, $element_id)
-    {
+		return $controls_start + $controls_new + $controls_end;
+	}
 
-        if ($loop_object instanceof \WP_Post) {
-            global $post;
-            $post = get_post($loop_object);
-            setup_postdata($post);
-        }
+	public function bricks_query_loop_object( $loop_object, $loop_key, $query_obj ) {
 
-        return $loop_object;
-    }
+		if ( $query_obj->object_type !== $this->name ) {
+			return $loop_object;
+		}
 
-    /**
-     * Allows adding custom controls for the query
-     *
-     * @param array $controls
-     * @return $this
-     */
-    public function set_controls(array $controls): static {
-        $this->controls = array_merge($this->controls, $controls);
-        return $this;
-    }
+		if ($this->config_flags['loop_object_callback'] !== false) {
+			// Users can provide their own loop object callback. If so skip automatic parsing
+			$loop_object = call_user_func_array($this->config_flags['loop_object_callback'], [
+				$loop_object,
+				$loop_key,
+				$query_obj,
+				&$this
+			]);
+		} else {
 
-    /**
-     * Compatibility layer to add Gridbuilder query attribute as check in WP_Grid_Builder_Bricks\Includes\Providers::set_query_args
-     *
-     * @return $this
-     */
-    public function wpgb(bool $set = true): static
-    {
-        $this->config_flags['wpgb'] = $set;
-        return $this;
-    }
+			// If no callback is provided we try to parse the loop object automatically
+			switch ( $this->type ) {
+				case Query_Type::Post:
+					global $post;
+					$post = get_post( $loop_object );
+					setup_postdata( $post );
+					break;
+				case Query_Type::Other:
+					$GLOBALS[ $this->name . '_obj' ] = $loop_object;
+					break;
+			}
+		}
 
-    /**
-     * Adds a limit control to the query. Also adds the query args by default
-     *
-     * @param bool $set
-     * @param string $label
-     * @return Query
-     */
-    public function per_page_control(bool $set = true, string $label = 'Limit'): static
-    {
-        $this->config_flags['per_page_control'] = new Per_Page_Control($this->name, $label);
-        return $this;
-    }
+		return $loop_object;
+	}
+
+	/**
+	 * Allows adding custom controls for the query
+	 *
+	 * @param array $controls
+	 *
+	 * @return $this
+	 */
+	public function set_controls( array $controls ): static {
+		$this->controls = array_merge( $this->controls, $controls );
+
+		return $this;
+	}
+
+	/**
+	 * Compatibility layer to add Gridbuilder query attribute as check in WP_Grid_Builder_Bricks\Includes\Providers::set_query_args
+	 *
+	 * @return $this
+	 */
+	public function wpgb( bool $set = true ): static {
+		$this->config_flags['wpgb'] = $set;
+
+		return $this;
+	}
+
+	/**
+	 * Adds a limit control to the query. Also adds the query args by default
+	 *
+	 * @param bool $set
+	 * @param string $label
+	 *
+	 * @return Query
+	 */
+	public function per_page_control( bool $set = true, string $label = 'Limit' ): static {
+		if ($set === false) {
+			$this->config_flags['per_page_control'] = false;
+			return $this;
+		} else {
+			$this->config_flags['per_page_control'] = new Per_Page_Control( $this->name, $label );
+		}
+
+		return $this;
+	}
+
+	/**
+	 * Allows to set a custom loop object callback. It is used to setup the actual loop object e.g. making the data globally available
+	 *
+	 * @param callable $callback
+	 *
+	 * @return $this
+	 */
+	public function loop_object_callback(callable $callback): static {
+		$this->config_flags['loop_object_callback'] = $callback;
+		return $this;
+	}
 
 }
