@@ -1,15 +1,14 @@
 # God damn easy Bricks Builder Custom Queries
 
-You are a developer and want to add dynamic data tags to the bricks builder? This package is for you. From now on you
-can add your dynamic data tags with 3 lines of code.
-It automatically registered tags, parses filters and even allows you to add your very own pattern parsing.
+You are a developer and want to add custom queries to the bricks builder? This package is for you. From now on you
+can add your own logic and functionality to loops. Ever wanted to iterate your custom database, external APIs or WordPress Data Structures in a highly complex loop? Here you go.
 
 Feature overview:
 
 - Simple registration of Custom Queries
 - Automatic Performance Profiling for the [Query Monitor Plugin](https://de.wordpress.org/plugins/query-monitor/)
 - Add custom controls to you query
-- WP Gridbuilder Support
+- WP Gridbuilder Support (Only for native WordPress Data Types)
 
 ## Installation
 
