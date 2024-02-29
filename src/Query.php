@@ -121,6 +121,7 @@ class Query {
 	 *
 	 * @param $control_options
 	 *
+	 * @see https://academy.bricksbuilder.io/article/filter-bricks-setup-control_options/
 	 * @return array
 	 */
 	public function bricks_add_query_type( $control_options ): array {
@@ -135,6 +136,7 @@ class Query {
 	 *
 	 * @param $controls
 	 *
+	 * @see https://academy.bricksbuilder.io/article/filter-bricks-elements-element_name-controls/
 	 * @return array
 	 */
 	public function bricks_register_controls( $controls ): array {
@@ -179,6 +181,17 @@ class Query {
 		return $controls_start + $controls_new + $controls_end;
 	}
 
+	/**
+	 * When iterating the results of the query this function is used to manipulate the objects.
+	 * For type "other" this function creates a global variable that can be accessed in the loop.
+	 *
+	 * @param $loop_object
+	 * @param $loop_key
+	 * @param $query_obj
+	 *
+	 * @see https://academy.bricksbuilder.io/article/filter-bricks-query-loop_object/
+	 * @return mixed
+	 */
 	public function bricks_query_loop_object( $loop_object, $loop_key, $query_obj ) {
 
 		if ( $query_obj->object_type !== $this->name ) {
@@ -209,6 +222,27 @@ class Query {
 		}
 
 		return $loop_object;
+	}
+
+	/**
+	 * Callback used to remove super global after loop
+	 *
+	 * @param $query
+	 * @param $args
+	 *
+	 * @see https://academy.bricksbuilder.io/article/action-bricks-query-after_loop/
+	 * @return void
+	 */
+	public function bricks_query_after_loop( $query, $args ): void {
+
+		if ( $query->object_type !== $this->name ) {
+			return;
+		}
+
+		// If is type other and the super global exists, remove it after loop
+		if ($this->type === Query_Type::Other && isset($GLOBALS[$this->name . '_obj'])) {
+			unset($GLOBALS[$this->name . '_obj']);
+		}
 	}
 
 	/**
