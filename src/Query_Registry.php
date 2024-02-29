@@ -59,6 +59,7 @@ class Query_Registry
         foreach ($queries as $query) {
             add_filter('bricks/query/run', [$query, 'bricks_query'], 10, 2);
             add_filter('bricks/query/loop_object', [$query, 'bricks_query_loop_object'], 10, 3);
+            add_action('bricks/query/after_loop', [$query, 'bricks_query_after_loop'], 10, 2);
             add_filter('bricks/setup/control_options', [$query, 'bricks_add_query_type']);
 
             // Register Loops for some elements
