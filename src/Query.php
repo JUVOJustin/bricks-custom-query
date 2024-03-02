@@ -19,8 +19,9 @@ class Query {
 	private Query_Type $type;
 
 	private array $config_flags = [
-		'wpgb'             => true,
-		'per_page_control' => true,
+		'wpgb'                 => true,
+		'per_page_control'     => true,
+		'fix_empty_post_ins'   => true,
 		'loop_object_callback' => false
 	];
 
@@ -71,27 +72,46 @@ class Query {
 			] );
 		} else {
 
-			$args = [];
+			$prepared_args = [];
 
 			// --- Config Flag: wpgb ---
 			if ( $this->config_flags['wpgb'] ) {
-				$args['wpgb_bricks'] = 'bricks-element-' . $query_obj->element_id;
+				$prepared_args['wpgb_bricks'] = 'bricks-element-' . $query_obj->element_id;
 			}
 
 			// --- Config Flag: per_page_control ---
 			if ( $this->config_flags['per_page_control'] instanceof Per_Page_Control ) {
-				$args = $this->config_flags['per_page_control']->add_per_page_arg( $args, $query_obj, $this->type );
+				$prepared_args = $this->config_flags['per_page_control']->add_per_page_arg( $prepared_args, $query_obj, $this->type );
 			}
 
 			// For wordpress native types the callback must return the query args. This allows manipulation and caching
 			$args = call_user_func_array( $this->callback, [
-				$args,
+				$prepared_args,
 				$query_obj,
 				&$this
 			] );
 
 			switch ( $this->type ) {
 				case Query_Type::Post:
+
+					// --- Config Flag: fix_empty_post_ins ---
+					if ( $this->config_flags['fix_empty_post_ins'] ) {
+						foreach (
+							[
+								'post__in',
+								'post_parent__in',
+								'category__in',
+								'tag__in',
+								'author__in',
+								'tag_slug__in'
+							] as $in
+						) {
+							if ( isset( $args[ $in ] ) && empty( $args[ $in ] ) ) {
+								$args[ $in ] = [ 0 ];
+							}
+						}
+					}
+
 					$query   = new WP_Query( $args );
 					$results = $query->get_posts();
 					break;
@@ -121,8 +141,8 @@ class Query {
 	 *
 	 * @param $control_options
 	 *
-	 * @see https://academy.bricksbuilder.io/article/filter-bricks-setup-control_options/
 	 * @return array
+	 * @see https://academy.bricksbuilder.io/article/filter-bricks-setup-control_options/
 	 */
 	public function bricks_add_query_type( $control_options ): array {
 		$control_options['queryTypes'][ $this->name ] = $this->label ?? "";
@@ -136,8 +156,8 @@ class Query {
 	 *
 	 * @param $controls
 	 *
-	 * @see https://academy.bricksbuilder.io/article/filter-bricks-elements-element_name-controls/
 	 * @return array
+	 * @see https://academy.bricksbuilder.io/article/filter-bricks-elements-element_name-controls/
 	 */
 	public function bricks_register_controls( $controls ): array {
 		// --- Config Flag: per_page_control ---
@@ -189,8 +209,8 @@ class Query {
 	 * @param $loop_key
 	 * @param $query_obj
 	 *
-	 * @see https://academy.bricksbuilder.io/article/filter-bricks-query-loop_object/
 	 * @return mixed
+	 * @see https://academy.bricksbuilder.io/article/filter-bricks-query-loop_object/
 	 */
 	public function bricks_query_loop_object( $loop_object, $loop_key, $query_obj ) {
 
@@ -198,14 +218,14 @@ class Query {
 			return $loop_object;
 		}
 
-		if ($this->config_flags['loop_object_callback'] !== false) {
+		if ( $this->config_flags['loop_object_callback'] !== false ) {
 			// Users can provide their own loop object callback. If so skip automatic parsing
-			$loop_object = call_user_func_array($this->config_flags['loop_object_callback'], [
+			$loop_object = call_user_func_array( $this->config_flags['loop_object_callback'], [
 				$loop_object,
 				$loop_key,
 				$query_obj,
 				&$this
-			]);
+			] );
 		} else {
 
 			// If no callback is provided we try to parse the loop object automatically
@@ -230,8 +250,8 @@ class Query {
 	 * @param $query
 	 * @param $args
 	 *
-	 * @see https://academy.bricksbuilder.io/article/action-bricks-query-after_loop/
 	 * @return void
+	 * @see https://academy.bricksbuilder.io/article/action-bricks-query-after_loop/
 	 */
 	public function bricks_query_after_loop( $query, $args ): void {
 
@@ -240,8 +260,8 @@ class Query {
 		}
 
 		// If is type other and the super global exists, remove it after loop
-		if ($this->type === Query_Type::Other && isset($GLOBALS[$this->name . '_obj'])) {
-			unset($GLOBALS[$this->name . '_obj']);
+		if ( $this->type === Query_Type::Other && isset( $GLOBALS[ $this->name . '_obj' ] ) ) {
+			unset( $GLOBALS[ $this->name . '_obj' ] );
 		}
 	}
 
@@ -278,12 +298,26 @@ class Query {
 	 * @return Query
 	 */
 	public function per_page_control( bool $set = true, string $label = 'Limit' ): static {
-		if ($set === false) {
+		if ( $set === false ) {
 			$this->config_flags['per_page_control'] = false;
+
 			return $this;
 		} else {
 			$this->config_flags['per_page_control'] = new Per_Page_Control( $this->name, $label );
 		}
+
+		return $this;
+	}
+
+	/**
+	 * Sets 'post__in', 'post_parent__in', 'category__in', 'tag__in', 'author__in', 'tag_slug__in' to [0] if empty, to avoid returning all posts
+	 *
+	 * @see https://core.trac.wordpress.org/ticket/28099
+	 *
+	 * @return $this
+	 */
+	public function fix_empty_post_ins( bool $set = true ): static {
+		$this->config_flags['fix_empty_post__in'] = $set;
 
 		return $this;
 	}
@@ -295,8 +329,9 @@ class Query {
 	 *
 	 * @return $this
 	 */
-	public function loop_object_callback(callable $callback): static {
+	public function loop_object_callback( callable $callback ): static {
 		$this->config_flags['loop_object_callback'] = $callback;
+
 		return $this;
 	}
 
