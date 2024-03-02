@@ -48,12 +48,12 @@ class Query {
 	/**
 	 * Callback that actually runs our query
 	 *
-	 * @param $results
-	 * @param $query_obj
+	 * @param array $results
+	 * @param \Bricks\Query $query_obj
 	 *
 	 * @return array
 	 */
-	public function bricks_query( $results, $query_obj ): array {
+	public function bricks_query( array $results, \Bricks\Query $query_obj ): array {
 
 		// Only modify queries for benefits
 		if ( $query_obj->object_type !== $this->name ) {
@@ -71,66 +71,80 @@ class Query {
 				&$this
 			] );
 		} else {
-
-			$prepared_args = [];
-
-			// --- Config Flag: wpgb ---
-			if ( $this->config_flags['wpgb'] ) {
-				$prepared_args['wpgb_bricks'] = 'bricks-element-' . $query_obj->element_id;
-			}
-
-			// --- Config Flag: per_page_control ---
-			if ( $this->config_flags['per_page_control'] instanceof Per_Page_Control ) {
-				$prepared_args = $this->config_flags['per_page_control']->add_per_page_arg( $prepared_args, $query_obj, $this->type );
-			}
-
-			// For wordpress native types the callback must return the query args. This allows manipulation and caching
-			$args = call_user_func_array( $this->callback, [
-				$prepared_args,
-				$query_obj,
-				&$this
-			] );
-
-			switch ( $this->type ) {
-				case Query_Type::Post:
-
-					// --- Config Flag: fix_empty_post_ins ---
-					if ( $this->config_flags['fix_empty_post_ins'] ) {
-						foreach (
-							[
-								'post__in',
-								'post_parent__in',
-								'category__in',
-								'tag__in',
-								'author__in',
-								'tag_slug__in'
-							] as $in
-						) {
-							if ( isset( $args[ $in ] ) && empty( $args[ $in ] ) ) {
-								$args[ $in ] = [ 0 ];
-							}
-						}
-					}
-
-					$query   = new WP_Query( $args );
-					$results = $query->get_posts();
-					break;
-				case Query_Type::User:
-					$query   = new WP_User_Query( $args );
-					$results = $query->get_results();
-					break;
-				case Query_Type::Term:
-					$query   = new WP_Term_Query( $args );
-					$results = $query->get_terms();
-					break;
-			}
+			$results = $this->process_wordpress_queries( $results, $query_obj );
 		}
 
 		// Stop profiling with query monitor
 		do_action( 'qm/stop', "bricks-$this->name-query" );
 
-		if ( empty( $results ) ) {
-			return [];
+		return $results;
+	}
+
+	/**
+	 * Process wordpress native queries
+	 *
+	 * @param $results
+	 * @param $query_obj
+	 *
+	 * @return array
+	 */
+	private function process_wordpress_queries(array $results, \Bricks\Query $query_obj): array {
+		$prepared_args = [];
+
+		// --- Config Flag: wpgb ---
+		if ( $this->config_flags['wpgb'] ) {
+			$prepared_args['wpgb_bricks'] = 'bricks-element-' . $query_obj->element_id;
+		}
+
+		// --- Config Flag: per_page_control ---
+		if ( $this->config_flags['per_page_control'] instanceof Per_Page_Control ) {
+			$prepared_args = $this->config_flags['per_page_control']->add_per_page_arg( $prepared_args, $query_obj, $this->type );
+		}
+
+		// For wordpress native types the callback must return the query args. This allows manipulation and caching
+		$args = call_user_func_array( $this->callback, [
+			$prepared_args,
+			$query_obj,
+			&$this
+		] );
+
+		// If the callback had an error do not proceed
+		if ( $args === false || is_wp_error( $args ) ) {
+			return $results;
+		}
+
+		switch ( $this->type ) {
+			case Query_Type::Post:
+
+				// --- Config Flag: fix_empty_post_ins ---
+				if ( $this->config_flags['fix_empty_post_ins'] ) {
+					foreach (
+						[
+							'post__in',
+							'post_parent__in',
+							'category__in',
+							'tag__in',
+							'author__in',
+							'tag_slug__in'
+						] as $in
+					) {
+						if ( isset( $args[ $in ] ) && empty( $args[ $in ] ) ) {
+							$args[ $in ] = [ 0 ];
+						}
+					}
+				}
+
+				$query   = new WP_Query( $args );
+				$results = $query->get_posts();
+				break;
+			case Query_Type::User:
+				$query   = new WP_User_Query( $args );
+				$results = $query->get_results();
+				break;
+			case Query_Type::Term:
+				$query   = new WP_Term_Query( $args );
+				$results = $query->get_terms();
+				break;
 		}
 
 		return $results;
