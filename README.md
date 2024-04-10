@@ -68,36 +68,10 @@ Choose `Query_Type::Other` if you are not working with native wordpress data typ
 For native wordpress data types the callback must return valid query arguments. For custom data types you need to return
 the actual data. For the later the return value will not be processed further.
 
-### WP Gridbuilder Support
-By default each query is setup to support WP Gridbuilder. In your callback you will see the requried arguments. If you don´t want wpgb support, simply do:
-```php
-Query_Registry::set(
-    'collection_prompts', // Query name
-    'Collection Prompts', // Query label
-    function(array $args, $query_obj, Query $query) { // Callback for query args
-        return array_merge($args, [
-                'post_type' => 'posts',
-            ]
-        );
-    }
-)->wpgb(false);
-```
+### Query Configuration
+You can configure a couple of query configurations using setter function. Full documentation for these can be found here:
+https://github.com/JUVOJustin/bricks-custom-query/wiki/Query-Configs
 
-### Per Page Control
-By default each query is setup to have a control field for the number of items to be displayed. In your callback you will see the requried arguments. To disable simply do:
-```php
-Query_Registry::set(
-    'collection_prompts', // Query name
-    'Collection Prompts', // Query label
-    function(array $args, $query_obj, Query $query) { // Callback for query args
-        return array_merge($args, [
-                'post_type' => 'posts',
-            ]
-        );
-    }
-)->per_page_control(false);
-```
-To keep the control but change the label pass a second parameter: `->per_page_control(true, 'Per page');`
 
 ### Additional Controls
 You can add additional controls to your query. The full list of controls can be found here: https://academy.bricksbuilder.io/topic/controls/
