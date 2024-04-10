@@ -61,7 +61,7 @@ enum Query_Type
 }
 ```
 
-Choose `Query_Type::Other` if you are not working with native wordpress data types.
+Choose `Query_Type::Other` if you are not working with native wordpress data types. A more in detail guide for "Other" queries can be found in [this guide](https://github.com/JUVOJustin/bricks-custom-query/wiki/Queries-of-type-%22Other%22)
 
 ### Query Callback
 
