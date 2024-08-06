@@ -61,6 +61,7 @@ class Query_Registry
             add_filter('bricks/query/loop_object', [$query, 'bricks_query_loop_object'], 10, 3);
             add_action('bricks/query/after_loop', [$query, 'bricks_query_after_loop'], 10, 2);
             add_filter('bricks/setup/control_options', [$query, 'bricks_add_query_type']);
+            add_filter('bricks/query/result_max_num_pages', [$query, 'bricks_query_result_max_num_pages'], 10, 2);
 
             // Register Loops for some elements
             $elements = ['container', 'block', 'div'];
