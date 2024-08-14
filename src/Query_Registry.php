@@ -87,13 +87,37 @@ class Query_Registry
 
 	/**
 	 * Generate a universal deterministic key for the query.
+	 * Directly copied from bricks
 	 *
 	 * @param string $element_id
 	 *
+	 * @link Bricks\Query::generate_query_history_id in bricks/includes/query.php
 	 * @return string
 	 */
 	private static function build_history_key(string $element_id): string {
-		return $element_id;
+		$unique_id        = [];
+		$looping_query_id = \Bricks\Query::is_any_looping();
+
+		if ( $looping_query_id && $looping_query_id !== $element_id ) {
+			$unique_id[] = \Bricks\Query::get_query_element_id( $looping_query_id );
+			$unique_id[] = $element_id;
+			$unique_id[] = \Bricks\Query::get_query_object_type( $looping_query_id );
+
+			// Get loop ID
+			$loop_id = \Bricks\Query::get_loop_object_id( $looping_query_id );
+			if ( $loop_id ) {
+				$unique_id[] = $loop_id;
+			}
+
+			// Return: No loop ID found
+			else {
+				return "";
+			}
+		} else {
+			$unique_id[] = $element_id;
+		}
+
+		return implode( '_', $unique_id );
 	}
 
 	/**
