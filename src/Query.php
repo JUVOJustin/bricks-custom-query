@@ -63,11 +63,11 @@ class Query {
 			return $results;
 		}
 
-		/*// Try fetching the query results from the history
+		// Try fetching the query results from the history
 		$query_history = Query_Registry::getInstance()->get_from_history( $query_obj->element_id );
 		if ( $query_history !== false && ! empty( $query_history['results'] ) ) {
 			return $query_history['results'];
-		}*/
+		}
 
 		// Start profiling with query monitor
 		do_action( 'qm/start', "bricks-$this->name-query" );
