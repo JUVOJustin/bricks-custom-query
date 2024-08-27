@@ -22,7 +22,8 @@ class Query {
 		'wpgb'                 => true,
 		'per_page_control'     => true,
 		'fix_empty_post_ins'   => true,
-		'loop_object_callback' => false
+		'loop_object_callback' => false,
+		'language_control'     => false
 	];
 
 	/**
@@ -101,6 +102,11 @@ class Query {
 			$prepared_args = $this->config_flags['per_page_control']->add_per_page_arg( $prepared_args, $query_obj, $this->type );
 		}
 
+		// --- Config Flag: language_control ---
+		if ( $this->config_flags['language_control'] instanceof Language_Control ) {
+			$prepared_args = $this->config_flags['language_control']->add_language_arg( $prepared_args, $query_obj, $this->type );
+		}
+
 		// For wordpress native types the callback must return the query args. This allows manipulation and caching
 		$args = call_user_func_array( $this->callback, [
 			$prepared_args,
@@ -111,6 +117,22 @@ class Query {
 		// If the callback had an error do not proceed
 		if ( $args === false || is_wp_error( $args ) ) {
 			return $results;
+		}
+
+		// check language
+		if ( ! empty( $args['language'] ) ) {
+			
+			$current_blog_id = get_current_blog_id();
+
+			// switch the language
+			$current_locale = get_locale();
+			$switched_locale = switch_to_locale('de_DE');
+
+			$langs = get_available_languages();
+			$new_locale = get_locale();
+			$args['lang'] = 'en_EN';
+
+			do_action( 'wpml_switch_language', 'en' );
 		}
 
 		switch ( $this->type ) {
@@ -147,6 +169,11 @@ class Query {
 				break;
 		}
 
+		// switch back to origin language
+		if ( $switched_locale ) {
+			restore_previous_locale();
+		}
+
 		return $results;
 	}
 
@@ -177,6 +204,11 @@ class Query {
 		// --- Config Flag: per_page_control ---
 		if ( $this->config_flags['per_page_control'] instanceof Per_Page_Control ) {
 			$this->controls = $this->config_flags['per_page_control']->per_page_control() + $this->controls;
+		}
+
+		// --- Config Flag: language_control ---
+		if ( $this->config_flags['language_control'] instanceof Language_Control ) {
+			$this->controls = $this->config_flags['language_control']->language_control() + $this->controls;
 		}
 
 		// Continue if no controls to add
@@ -345,6 +377,24 @@ class Query {
 	 */
 	public function loop_object_callback( callable $callback ): static {
 		$this->config_flags['loop_object_callback'] = $callback;
+
+		return $this;
+	}
+
+	/**
+	 * Adds the language control
+	 *
+	 * @param bool $set
+	 * @param string $label
+	 *
+	 * @return Query
+	 */
+	public function language_control( bool $set = true, string $label = 'Language' ): static {
+		if ( $set === false ) {
+			$this->config_flags['language_control'] = false;
+			return $this;
+		}
+		$this->config_flags['language_control'] = new Language_Control( $this->name, $label );
 
 		return $this;
 	}
