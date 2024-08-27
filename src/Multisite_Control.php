@@ -30,15 +30,9 @@ class Multisite_Control
         if (empty($query_obj->settings['blog_id_'.$this->name])) {
             return $args;
         }
-
-        switch ($type) {
-            case Query_Type::Post:
-                $args['blog_id'] = $query_obj->settings['blog_id_'.$this->name];
-                break;
-            default:
-                break;
-        }
-
+        
+        $args['blog_id'] = $query_obj->settings['blog_id_'.$this->name];
+        
         return $args;
     }
 

@@ -125,7 +125,7 @@ class Query {
 		}
 
 		// switch multisite if needed
-		if ( isset( $args['blog_id'] ) ) {
+		if ( ! empty( $args['blog_id'] ) ) {
 			switch_to_blog( $args['blog_id'] );
 		}
 
@@ -164,7 +164,7 @@ class Query {
 		}
 		
 		// restore site if needed
-		if ( isset( $args['blog_id'] ) ) {
+		if ( ! empty( $args['blog_id'] ) ) {
 			restore_current_blog();
 		}
 
@@ -358,9 +358,8 @@ class Query {
 	 * @return Query
 	 */
 	public function multisite_control( bool $set = true, string $label = 'Site' ): static {
-		if ( $set === false ) {
+		if ( $set === false || ! is_multisite() ) {
 			$this->config_flags['multisite_control'] = false;
-
 			return $this;
 		} else {
 			$this->config_flags['multisite_control'] = new Multisite_Control( $this->name, $label );
