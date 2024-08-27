@@ -338,13 +338,13 @@ class Query {
 	 * @return Query
 	 */
 	public function per_page_control( bool $set = true, string $label = 'Limit' ): static {
+
 		if ( $set === false ) {
 			$this->config_flags['per_page_control'] = false;
 
 			return $this;
-		} else {
-			$this->config_flags['per_page_control'] = new Per_Page_Control( $this->name, $label );
 		}
+		$this->config_flags['per_page_control'] = new Per_Page_Control( $this->name, $label );
 
 		return $this;
 	}
