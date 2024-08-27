@@ -1,4 +1,9 @@
 <?php
+/**
+ * @license GPL-3.0-or-later
+ *
+ * Modified by Justin Vogt on 27-August-2024 using {@see https://github.com/BrianHenryIE/strauss}.
+ */
 
 namespace juvo\Bricks_Custom_Queries;
 
@@ -22,7 +27,8 @@ class Query {
 		'wpgb'                 => true,
 		'per_page_control'     => true,
 		'fix_empty_post_ins'   => true,
-		'loop_object_callback' => false
+		'loop_object_callback' => false,
+		'multisite_control'    => false
 	];
 
 	/**
@@ -101,6 +107,11 @@ class Query {
 			$prepared_args = $this->config_flags['per_page_control']->add_per_page_arg( $prepared_args, $query_obj, $this->type );
 		}
 
+		// --- Config Flag: multisite_control ---
+		if ( $this->config_flags['multisite_control'] instanceof Multisite_Control ) {
+			$prepared_args = $this->config_flags['multisite_control']->add_multisite_arg( $prepared_args, $query_obj, $this->type );
+		}
+
 		// For wordpress native types the callback must return the query args. This allows manipulation and caching
 		$args = call_user_func_array( $this->callback, [
 			$prepared_args,
@@ -111,6 +122,11 @@ class Query {
 		// If the callback had an error do not proceed
 		if ( $args === false || is_wp_error( $args ) ) {
 			return $results;
+		}
+
+		// switch multisite if needed
+		if ( isset( $args['blog_id'] ) ) {
+			switch_to_blog( $args['blog_id'] );
 		}
 
 		switch ( $this->type ) {
@@ -146,6 +162,11 @@ class Query {
 				$results = $query->get_terms();
 				break;
 		}
+		
+		// restore site if needed
+		if ( isset( $args['blog_id'] ) ) {
+			restore_current_blog();
+		}
 
 		return $results;
 	}
@@ -177,6 +198,11 @@ class Query {
 		// --- Config Flag: per_page_control ---
 		if ( $this->config_flags['per_page_control'] instanceof Per_Page_Control ) {
 			$this->controls = $this->config_flags['per_page_control']->per_page_control() + $this->controls;
+		}
+
+		// --- Config Flag: multisite_control ---
+		if ( $this->config_flags['multisite_control'] instanceof Multisite_Control ) {
+			$this->controls = $this->config_flags['multisite_control']->multisite_control() + $this->controls;
 		}
 
 		// Continue if no controls to add
@@ -318,6 +344,26 @@ class Query {
 			return $this;
 		} else {
 			$this->config_flags['per_page_control'] = new Per_Page_Control( $this->name, $label );
+		}
+
+		return $this;
+	}
+
+	/**
+	 * Adds a limit control to the query. Also adds the query args by default
+	 *
+	 * @param bool $set
+	 * @param string $label
+	 *
+	 * @return Query
+	 */
+	public function multisite_control( bool $set = true, string $label = 'Site' ): static {
+		if ( $set === false ) {
+			$this->config_flags['multisite_control'] = false;
+
+			return $this;
+		} else {
+			$this->config_flags['multisite_control'] = new Multisite_Control( $this->name, $label );
 		}
 
 		return $this;
