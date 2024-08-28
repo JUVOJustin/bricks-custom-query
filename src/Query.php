@@ -130,12 +130,6 @@ class Query {
 			do_action( 'wpml_switch_language', $args['language'] );
 		}
 
-		// check for polylang plugin
-		if ( function_exists( 'pll_the_languages' ) && ! empty( $args['language'] ) ) {
-			// add the language to the args so that polylang knows what to query
-			$args['lang'] = $args['language'];
-		}
-
 		switch ( $this->type ) {
 			case Query_Type::Post:
 
