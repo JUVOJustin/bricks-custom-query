@@ -107,11 +107,6 @@ class Query {
 			$prepared_args = $this->config_flags['per_page_control']->add_per_page_arg( $prepared_args, $query_obj, $this->type );
 		}
 
-		// --- Config Flag: multisite_control ---
-		if ( $this->config_flags['multisite_control'] instanceof Multisite_Control ) {
-			$prepared_args = $this->config_flags['multisite_control']->add_multisite_arg( $prepared_args, $query_obj, $this->type );
-		}
-
 		// For wordpress native types the callback must return the query args. This allows manipulation and caching
 		$args = call_user_func_array( $this->callback, [
 			$prepared_args,
@@ -124,9 +119,14 @@ class Query {
 			return $results;
 		}
 
+		// --- Config Flag: multisite_control ---
+		if ( $this->config_flags['multisite_control'] instanceof Multisite_Control ) {
+			$blog_id = $this->config_flags['multisite_control']->get_blog_id( $query_obj );
+		}
+
 		// switch multisite if needed
-		if ( ! empty( $args['blog_id'] ) ) {
-			switch_to_blog( $args['blog_id'] );
+		if ( ! empty( $blog_id ) ) {
+			switch_to_blog( $blog_id );
 		}
 
 		switch ( $this->type ) {
@@ -164,7 +164,7 @@ class Query {
 		}
 		
 		// restore site if needed
-		if ( ! empty( $args['blog_id'] ) ) {
+		if ( ! empty( $blog_id ) ) {
 			restore_current_blog();
 		}
 
