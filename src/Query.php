@@ -365,8 +365,8 @@ class Query {
 			$this->config_flags['multisite_control'] = false;
 			return $this;
 		}
-		
-		return $this->config_flags['multisite_control'] = new Multisite_Control( $this->name, $label );
+		$this->config_flags['multisite_control'] = new Multisite_Control( $this->name, $label );
+		return $this;
 	}
 
 	/**
