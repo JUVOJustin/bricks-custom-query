@@ -119,20 +119,21 @@ class Query {
 			return $results;
 		}
 
-		// check language
-		if ( ! empty( $args['language'] ) ) {
-			
-			$current_blog_id = get_current_blog_id();
+		// switch the locale just in case that there a translateable strings somewhere
+		if ( ! empty( $args['language'] ) ) {			
+			$switched_locale = switch_to_locale($args['language']);
+		}
 
-			// switch the language
-			$current_locale = get_locale();
-			$switched_locale = switch_to_locale('de_DE');
+		// check if wpml is installed and switch the language to there
+		if ( function_exists( 'wpml_get_current_language' ) && ! empty( $args['language'] ) ) {
+			$current_language = wpml_get_current_language();
+			do_action( 'wpml_switch_language', $args['language'] );
+		}
 
-			$langs = get_available_languages();
-			$new_locale = get_locale();
-			$args['lang'] = 'en_EN';
-
-			do_action( 'wpml_switch_language', 'en' );
+		// check for polylang plugin
+		if ( function_exists( 'pll_the_languages' ) && ! empty( $args['language'] ) ) {
+			// add the language to the args so that polylang knows what to query
+			$args['lang'] = $args['language'];
 		}
 
 		switch ( $this->type ) {
@@ -172,6 +173,11 @@ class Query {
 		// switch back to origin language
 		if ( $switched_locale ) {
 			restore_previous_locale();
+		}
+
+		// switch back to the language
+		if ( function_exists( 'wpml_get_current_language' ) && ! empty( $args['language'] ) ) {
+			do_action( 'wpml_switch_language', $current_language );
 		}
 
 		return $results;
