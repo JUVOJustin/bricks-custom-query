@@ -38,22 +38,18 @@ class Language_Control
     }
 
     /**
-     * Adds a language argument to the query arguments array if a specific language setting is provided.
+     * Gets the setted language if present
      *
-     * @param array $args          The existing query arguments array.
      * @param object $query_obj    The query object that may contain settings related to language.
-     * @param Query_Type $type     The query type object (or any other type expected for $type).
-     * @return array               The modified query arguments array with the added language argument.
+     * @return bool|string         Either false if there is no language set, or the language string
      */
-    public function add_language_arg(array $args, object $query_obj, Query_Type $type): array
+    public function get_language( object $query_obj ): bool|string
     {
         if (empty($query_obj->settings['language_' . $this->name])) {
-            return $args;
+            return false;
         }
 
-        $args['language'] = $query_obj->settings['language_' . $this->name];
-
-        return $args;
+        return $query_obj->settings['language_' . $this->name];
     }
 
     /**

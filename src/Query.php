@@ -104,7 +104,7 @@ class Query {
 
 		// --- Config Flag: language_control ---
 		if ( $this->config_flags['language_control'] instanceof Language_Control ) {
-			$prepared_args = $this->config_flags['language_control']->add_language_arg( $prepared_args, $query_obj, $this->type );
+			$language = $this->config_flags['language_control']->get_language( $query_obj );
 		}
 
 		// For wordpress native types the callback must return the query args. This allows manipulation and caching
@@ -119,15 +119,10 @@ class Query {
 			return $results;
 		}
 
-		// switch the locale just in case that there a translateable strings somewhere
-		if ( ! empty( $args['language'] ) ) {			
-			$switched_locale = switch_to_locale($args['language']);
-		}
-
 		// check if wpml is installed and switch the language to there
-		if ( function_exists( 'wpml_get_current_language' ) && ! empty( $args['language'] ) ) {
+		if ( function_exists( 'wpml_get_current_language' ) && ! empty( $language ) ) {
 			$current_language = wpml_get_current_language();
-			do_action( 'wpml_switch_language', $args['language'] );
+			do_action( 'wpml_switch_language', $language );
 		}
 
 		switch ( $this->type ) {
@@ -164,13 +159,8 @@ class Query {
 				break;
 		}
 
-		// switch back to origin language
-		if ( $switched_locale ) {
-			restore_previous_locale();
-		}
-
 		// switch back to the language
-		if ( function_exists( 'wpml_get_current_language' ) && ! empty( $args['language'] ) ) {
+		if ( function_exists( 'wpml_get_current_language' ) && ! empty( $language ) && ! empty( $current_language ) ) {
 			do_action( 'wpml_switch_language', $current_language );
 		}
 
