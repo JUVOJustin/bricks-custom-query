@@ -361,11 +361,9 @@ class Query {
 		if ( $set === false || ! is_multisite() ) {
 			$this->config_flags['multisite_control'] = false;
 			return $this;
-		} else {
-			$this->config_flags['multisite_control'] = new Multisite_Control( $this->name, $label );
 		}
-
-		return $this;
+		
+		return $this->config_flags['multisite_control'] = new Multisite_Control( $this->name, $label );
 	}
 
 	/**
