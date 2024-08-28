@@ -137,8 +137,8 @@ class Query {
 		}
 		
 		// check if wpml is installed and switch the language to there
-		if ( ! empty( $language ) ) {
-			#$current_language = wpml_get_current_language();
+		if ( function_exists( 'wpml_get_current_language' ) && ! empty( $language ) ) {
+			$current_language = wpml_get_current_language();
 			do_action( 'wpml_switch_language', $language );
 		}
 
@@ -390,7 +390,8 @@ class Query {
 			return $this;
 		}
 		
-		return $this->config_flags['multisite_control'] = new Multisite_Control( $this->name, $label );
+		$this->config_flags['multisite_control'] = new Multisite_Control( $this->name, $label );
+		return $this;
 	}
 
 	/**
