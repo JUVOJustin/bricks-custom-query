@@ -1,4 +1,9 @@
 <?php
+/**
+ * @license GPL-3.0-or-later
+ *
+ * Modified by Justin Vogt on 27-August-2024 using {@see https://github.com/BrianHenryIE/strauss}.
+ */
 
 namespace juvo\Bricks_Custom_Queries;
 
@@ -23,7 +28,8 @@ class Query {
 		'per_page_control'     => true,
 		'fix_empty_post_ins'   => true,
 		'loop_object_callback' => false,
-		'language_control'     => false
+		'language_control'     => false,
+		'multisite_control'    => false
 	];
 
 	/**
@@ -119,9 +125,20 @@ class Query {
 			return $results;
 		}
 
+		
+		// --- Config Flag: multisite_control ---
+		if ( $this->config_flags['multisite_control'] instanceof Multisite_Control ) {
+			$blog_id = $this->config_flags['multisite_control']->get_blog_id( $query_obj );
+		}
+		
+		// switch multisite if needed
+		if ( ! empty( $blog_id ) ) {
+			switch_to_blog( $blog_id );
+		}
+		
 		// check if wpml is installed and switch the language to there
-		if ( function_exists( 'wpml_get_current_language' ) && ! empty( $language ) ) {
-			$current_language = wpml_get_current_language();
+		if ( ! empty( $language ) ) {
+			#$current_language = wpml_get_current_language();
 			do_action( 'wpml_switch_language', $language );
 		}
 
@@ -158,11 +175,20 @@ class Query {
 				$results = $query->get_terms();
 				break;
 		}
-
+		
 		// switch back to the language
-		if ( function_exists( 'wpml_get_current_language' ) && ! empty( $language ) && ! empty( $current_language ) ) {
+		if ( ! empty( $language ) && ! empty( $current_language ) ) {
 			do_action( 'wpml_switch_language', $current_language );
 		}
+
+		// restore site if needed
+		if ( ! empty( $blog_id ) ) {
+			add_action( 'posts_results', function( $posts ) {
+				restore_current_blog();
+				return $posts;
+			}, 100 );
+		}
+		
 
 		return $results;
 	}
@@ -199,6 +225,11 @@ class Query {
 		// --- Config Flag: language_control ---
 		if ( $this->config_flags['language_control'] instanceof Language_Control ) {
 			$this->controls = $this->config_flags['language_control']->language_control() + $this->controls;
+		}
+		
+		// --- Config Flag: multisite_control ---
+		if ( $this->config_flags['multisite_control'] instanceof Multisite_Control ) {
+			$this->controls = $this->config_flags['multisite_control']->multisite_control() + $this->controls;
 		}
 
 		// Continue if no controls to add
@@ -334,12 +365,31 @@ class Query {
 	 * @return Query
 	 */
 	public function per_page_control( bool $set = true, string $label = 'Limit' ): static {
+
 		if ( $set === false ) {
 			$this->config_flags['per_page_control'] = false;
 
 			return $this;
+		}
+		$this->config_flags['per_page_control'] = new Per_Page_Control( $this->name, $label );
+
+		return $this;
+	}
+
+	/**
+	 * Adds a limit control to the query. Also adds the query args by default
+	 *
+	 * @param bool $set
+	 * @param string $label
+	 *
+	 * @return Query
+	 */
+	public function multisite_control( bool $set = true, string $label = 'Site' ): static {
+		if ( $set === false || ! is_multisite() ) {
+			$this->config_flags['multisite_control'] = false;
+			return $this;
 		} else {
-			$this->config_flags['per_page_control'] = new Per_Page_Control( $this->name, $label );
+			$this->config_flags['multisite_control'] = new Multisite_Control( $this->name, $label );
 		}
 
 		return $this;
