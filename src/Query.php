@@ -54,12 +54,12 @@ class Query {
 	/**
 	 * Callback that actually runs our query
 	 *
-	 * @param array $results
+	 * @param mixed Results of the query. Mostly an array, but sometimes false especially in ACF loops
 	 * @param \Bricks\Query $query_obj
 	 *
-	 * @return array
+	 * @return mixed
 	 */
-	public function bricks_query( array $results, \Bricks\Query $query_obj ): array {
+	public function bricks_query( mixed $results, \Bricks\Query $query_obj ): mixed {
 
 		// Only modify queries for benefits
 		if ( $query_obj->object_type !== $this->name ) {
