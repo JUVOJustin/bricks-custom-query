@@ -36,7 +36,7 @@ parameter is the query label, the third parameter is the callback that returns a
 Query_Registry::set(
     'collection_prompts', // Query name
     'Collection Prompts', // Query label
-    function(array $args, $query_obj, Query $query) { // Callback for query args
+    function(array $args, \Bricks\Query $query_obj, juvo\Bricks_Custom_Queries\Query $query) { // Callback for query args
         return array_merge($args, [
                 'post_type' => 'posts',
             ]
@@ -81,7 +81,7 @@ You don´t need to set the tab.
 Query_Registry::set(
     'collection_prompts', // Query name
     'Collection Prompts', // Query label
-    function(array $args, $query_obj, Query $query) { // Callback for query args
+    function(array $args, \Bricks\Query $query_obj, juvo\Bricks_Custom_Queries\Query $query) { // Callback for query args
         
         // Check setting and apply your logic
         if (!empty($query_obj->settings['return_all'])) {
