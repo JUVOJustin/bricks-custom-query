@@ -7,8 +7,9 @@ Feature overview:
 
 - Simple registration of Custom Queries
 - Automatic Performance Profiling for the [Query Monitor Plugin](https://de.wordpress.org/plugins/query-monitor/)
-- Add custom controls to you query
+- Add custom controls to your query
 - WP Gridbuilder Support (Only for native WordPress Data Types)
+- [Multisite Queries](https://github.com/JUVOJustin/bricks-custom-query/wiki/Query-Configs#multisite-control]) (Only for native WordPress Data Types)
 
 ## Installation
 
