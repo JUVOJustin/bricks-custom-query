@@ -15,13 +15,16 @@ use WP_User_Query;
 class Query {
 	private readonly string $name;
 
-	private string $label;
+	private readonly string $label;
 
 	private array $controls = [];
 
 	private $callback;
 
 	private Query_Type $type;
+
+	private int $total;
+	private int $max_pages;
 
 	private array $config_flags = [
 		'wpgb'                 => true,
@@ -66,6 +69,12 @@ class Query {
 			return $results;
 		}
 
+		// Try fetching the query results from the history
+		$query_history = Query_Registry::getInstance()->get_from_history( $query_obj->element_id );
+		if ( $query_history !== false && ! empty( $query_history['results'] ) ) {
+			return $query_history['results'];
+		}
+
 		// Start profiling with query monitor
 		do_action( 'qm/start', "bricks-$this->name-query" );
 
@@ -80,6 +89,9 @@ class Query {
 			$results = $this->process_wordpress_queries( $results, $query_obj );
 		}
 
+		// Add query to history
+		Query_Registry::getInstance()->add_to_history( $query_obj, $this, $results );
+
 		// Stop profiling with query monitor
 		do_action( 'qm/stop', "bricks-$this->name-query" );
 
@@ -89,12 +101,12 @@ class Query {
 	/**
 	 * Process wordpress native queries
 	 *
-	 * @param $results
-	 * @param $query_obj
+	 * @param array $results
+	 * @param \Bricks\Query $query_obj
 	 *
 	 * @return array
 	 */
-	private function process_wordpress_queries(array $results, \Bricks\Query $query_obj): array {
+	private function process_wordpress_queries( array $results, \Bricks\Query $query_obj ): array {
 		$prepared_args = [];
 
 		// --- Config Flag: wpgb ---
@@ -150,16 +162,29 @@ class Query {
 					}
 				}
 
-				$query   = new WP_Query( $args );
+				$query = new WP_Query( $args );
+				$this->setMaxPages( $query->max_num_pages ?? 0 );
+				$this->setTotal( $query->found_posts ?? 0 );
 				$results = $query->get_posts();
 				break;
 			case Query_Type::User:
-				$query   = new WP_User_Query( $args );
+				$query = new WP_User_Query( $args );
+				$this->setTotal( $query->get_total() ?? 0 );
+				$max_num_pages = empty( $prepared_args['number'] ) || count( $this->getTotal() ) < 1 ? 1 : ceil( $this->getTotal() / $prepared_args['number'] );
+				$this->setMaxPages( $max_num_pages );
 				$results = $query->get_results();
 				break;
 			case Query_Type::Term:
 				$query   = new WP_Term_Query( $args );
 				$results = $query->get_terms();
+
+				// Run another query to get the total count, set number to 0 to avoid limit
+				$total_terms_query = new \WP_Term_Query( array_merge( $prepared_args, [ 'number' => 0 ] ) );
+
+				$this->setTotal( $total_terms_query->get_terms() ?? 0 );
+				$max_num_pages = empty( $prepared_args['number'] ) || count( $this->getTotal() ) < 1 ? 1 : ceil( $this->getTotal() / $prepared_args['number'] );
+				$this->setMaxPages( $max_num_pages );
+
 				break;
 		}
 		
@@ -287,13 +312,13 @@ class Query {
 	/**
 	 * Callback used to remove super global after loop
 	 *
-	 * @param $query
+	 * @param \Bricks\Query $query
 	 * @param $args
 	 *
 	 * @return void
 	 * @see https://academy.bricksbuilder.io/article/action-bricks-query-after_loop/
 	 */
-	public function bricks_query_after_loop( $query, $args ): void {
+	public function bricks_query_after_loop( \Bricks\Query $query, $args ): void {
 
 		if ( $query->object_type !== $this->name ) {
 			return;
@@ -303,6 +328,23 @@ class Query {
 		if ( $this->type === Query_Type::Other && isset( $GLOBALS[ $this->name . '_obj' ] ) ) {
 			unset( $GLOBALS[ $this->name . '_obj' ] );
 		}
+	}
+
+	/**
+	 * Set max pages for query
+	 *
+	 * @param int $max_num_pages
+	 * @param \Bricks\Query $query_obj
+	 *
+	 * @return int
+	 * @see https://academy.bricksbuilder.io/article/filter-bricks-query-result_max_num_pages/
+	 */
+	public function bricks_query_result_max_num_pages( int $max_num_pages, \Bricks\Query $query_obj ): int {
+		if ( $query_obj->object_type !== $this->name ) {
+			return $max_num_pages;
+		}
+
+		return $this->getMaxPages();
 	}
 
 	/**
@@ -390,6 +432,22 @@ class Query {
 		$this->config_flags['loop_object_callback'] = $callback;
 
 		return $this;
+	}
+
+	public function getTotal(): int {
+		return $this->total;
+	}
+
+	public function setTotal( int $total ): void {
+		$this->total = $total;
+	}
+
+	public function getMaxPages(): int {
+		return $this->max_pages;
+	}
+
+	public function setMaxPages( int $max_pages ): void {
+		$this->max_pages = $max_pages;
 	}
 
 }
