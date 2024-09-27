@@ -165,7 +165,10 @@ class Query {
 		
 		// restore site if needed
 		if ( ! empty( $blog_id ) ) {
-			restore_current_blog();
+			add_action( 'posts_results', function( $posts ) {
+				restore_current_blog();
+				return $posts;
+			}, 100 );
 		}
 
 		return $results;
@@ -362,8 +365,8 @@ class Query {
 			$this->config_flags['multisite_control'] = false;
 			return $this;
 		}
-		
-		return $this->config_flags['multisite_control'] = new Multisite_Control( $this->name, $label );
+		$this->config_flags['multisite_control'] = new Multisite_Control( $this->name, $label );
+		return $this;
 	}
 
 	/**
