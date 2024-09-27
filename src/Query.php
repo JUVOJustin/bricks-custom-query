@@ -28,6 +28,7 @@ class Query {
 		'per_page_control'     => true,
 		'fix_empty_post_ins'   => true,
 		'loop_object_callback' => false,
+		'language_control'     => false,
 		'multisite_control'    => false
 	];
 
@@ -107,6 +108,11 @@ class Query {
 			$prepared_args = $this->config_flags['per_page_control']->add_per_page_arg( $prepared_args, $query_obj, $this->type );
 		}
 
+		// --- Config Flag: language_control ---
+		if ( $this->config_flags['language_control'] instanceof Language_Control ) {
+			$language = $this->config_flags['language_control']->get_language( $query_obj );
+		}
+
 		// For wordpress native types the callback must return the query args. This allows manipulation and caching
 		$args = call_user_func_array( $this->callback, [
 			$prepared_args,
@@ -119,14 +125,21 @@ class Query {
 			return $results;
 		}
 
+		
 		// --- Config Flag: multisite_control ---
 		if ( $this->config_flags['multisite_control'] instanceof Multisite_Control ) {
 			$blog_id = $this->config_flags['multisite_control']->get_blog_id( $query_obj );
 		}
-
+		
 		// switch multisite if needed
 		if ( ! empty( $blog_id ) ) {
 			switch_to_blog( $blog_id );
+		}
+		
+		// check if wpml is installed and switch the language to there
+		if ( function_exists( 'wpml_get_current_language' ) && ! empty( $language ) ) {
+			$current_language = wpml_get_current_language();
+			do_action( 'wpml_switch_language', $language );
 		}
 
 		switch ( $this->type ) {
@@ -163,10 +176,19 @@ class Query {
 				break;
 		}
 		
+		// switch back to the language
+		if ( ! empty( $language ) && ! empty( $current_language ) ) {
+			do_action( 'wpml_switch_language', $current_language );
+		}
+
 		// restore site if needed
 		if ( ! empty( $blog_id ) ) {
-			restore_current_blog();
+			add_action( 'posts_results', function( $posts ) {
+				restore_current_blog();
+				return $posts;
+			}, 100 );
 		}
+		
 
 		return $results;
 	}
@@ -200,6 +222,11 @@ class Query {
 			$this->controls = $this->config_flags['per_page_control']->per_page_control() + $this->controls;
 		}
 
+		// --- Config Flag: language_control ---
+		if ( $this->config_flags['language_control'] instanceof Language_Control ) {
+			$this->controls = $this->config_flags['language_control']->language_control() + $this->controls;
+		}
+		
 		// --- Config Flag: multisite_control ---
 		if ( $this->config_flags['multisite_control'] instanceof Multisite_Control ) {
 			$this->controls = $this->config_flags['multisite_control']->multisite_control() + $this->controls;
@@ -363,7 +390,8 @@ class Query {
 			return $this;
 		}
 		
-		return $this->config_flags['multisite_control'] = new Multisite_Control( $this->name, $label );
+		$this->config_flags['multisite_control'] = new Multisite_Control( $this->name, $label );
+		return $this;
 	}
 
 	/**
@@ -388,6 +416,24 @@ class Query {
 	 */
 	public function loop_object_callback( callable $callback ): static {
 		$this->config_flags['loop_object_callback'] = $callback;
+
+		return $this;
+	}
+
+	/**
+	 * Adds the language control
+	 *
+	 * @param bool $set
+	 * @param string $label
+	 *
+	 * @return Query
+	 */
+	public function language_control( bool $set = true, string $label = 'Language' ): static {
+		if ( $set === false ) {
+			$this->config_flags['language_control'] = false;
+			return $this;
+		}
+		$this->config_flags['language_control'] = new Language_Control( $this->name, $label );
 
 		return $this;
 	}
